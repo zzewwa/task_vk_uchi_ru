@@ -1,0 +1,250 @@
+openapi: 3.0.3
+info:
+  title: API сервиса для тестового задания
+  version: 0.1.0
+tags:
+  - name: students
+    description: Всё что касается учеников
+  - name: classes
+    description: Всё что касается классов
+paths:
+  /session:
+    post:
+      tags:
+        - students
+      summary: Получить JWT токен по ФИО существующего студента
+      operationId: createSession
+      requestBody:
+        description: Данные студента для авторизации (по умолчанию подставлены данные seed-админа)
+        content:
+          application/json:
+            example:
+              first_name: Admin
+              last_name: System
+              surname: User
+            schema:
+              $ref: '#/components/schemas/SessionCreateRequest'
+        required: true
+      responses:
+        '200':
+          description: Токен сессии
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionCreateResponse'
+        '400':
+          description: Некорректные данные авторизации
+
+  /students:
+    post:
+      tags:
+        - students
+      summary: Регистрация нового студента
+      operationId: createStudent
+      requestBody:
+        description: Новый студент
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Student'
+        required: true
+      responses:
+        '201':
+          description: Successful operation
+          headers:
+            X-Auth-Token:
+              description: JWT токен для последующей авторизации
+              example: eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwiand0X3ZhbGlkYXRpb24iOiJhYmNkIiwiY3JlYXRlZF9hdCI6MTcxMzE2ODAwMH0.signature
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Student'
+        '405':
+          description: Invalid input
+  /students/{user_id}:
+    parameters:
+      - name: user_id
+        description: id студента
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    delete:
+      tags:
+        - students
+      summary: Удалить студента
+      operationId: deleteStudent
+      security:
+        - bearerAuth: []
+      responses:
+        '400':
+          description: Некорректный id студента
+        '401':
+          description: Некорректная авторизация
+
+  /schools/{school_id}/classes/{class_id}/students:
+    parameters:
+      - $ref: '#/components/parameters/school_id'
+      - $ref: '#/components/parameters/class_id'
+    get:
+      tags:
+        - students
+        - classes
+      summary: Вывести список студентов класса
+      operationId: getClassStudentList
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список студентов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Student'
+        '401':
+          description: Некорректная авторизация
+
+
+
+  /schools/{school_id}/classes:
+    parameters:
+      - $ref: '#/components/parameters/school_id'
+    get:
+      tags:
+        - classes
+      summary: Вывести список классов школы
+      operationId: getClassList
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список классов
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Class'
+        '401':
+          description: Некорректная авторизация
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Ожидается JWT токен, выдаваемый при регистрации или создании сессии
+      bearerFormat: JWT
+  parameters:
+    school_id:
+      name: school_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+    class_id:
+      name: class_id
+      description: id класса
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int32
+  schemas:
+    SessionCreateRequest:
+      type: object
+      required:
+        - first_name
+        - last_name
+        - surname
+      example:
+        first_name: Admin
+        last_name: System
+        surname: User
+      properties:
+        first_name:
+          type: string
+          example: Admin
+        last_name:
+          type: string
+          example: System
+        surname:
+          type: string
+          example: User
+    SessionCreateResponse:
+      type: object
+      required:
+        - token
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MSwiand0X3ZhbGlkYXRpb24iOiJhYmNkIiwiY3JlYXRlZF9hdCI6MTcxMzE2ODAwMH0.signature
+    Class:
+      type: object
+      required:
+        - id
+        - number
+        - letter
+        - students_count
+      properties:
+        id:
+          type: integer
+          format: int32
+          example: 10
+          readOnly: true
+        number:
+          type: integer
+          format: int32
+          example: 1
+          description: Цифра класса
+        letter:
+          type: string
+          example: Б
+          description: Буква класса
+        students_count:
+          type: integer
+          format: int32
+          example: 32
+          readOnly: true
+          description: Количество учеников в классе
+    Student:
+      required:
+        - id
+        - first_name
+        - last_name
+        - surname
+        - class_id
+        - school_id
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          example: 10
+          readOnly: true
+        first_name:
+          type: string
+          example: Вячеслав
+        last_name:
+          type: string
+          example: Абдурахмангаджиевич
+        surname:
+          type: string
+          example: Мухобойников-Сыркин
+        class_id:
+          type: integer
+          format: int32
+        school_id:
+          type: integer
+          format: int32
